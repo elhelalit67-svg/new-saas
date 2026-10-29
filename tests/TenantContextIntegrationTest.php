@@ -42,8 +42,10 @@ try {
         $insertDomain->execute([
             'tenant_id' => $tenantId,
             'hostname' => $hostname,
-            'is_verified' => $verified,
-            'is_active' => $active,
+            // PDO::execute() may serialize PHP false as an empty string,
+            // which PostgreSQL does not accept for a boolean parameter.
+            'is_verified' => $verified ? 'true' : 'false',
+            'is_active' => $active ? 'true' : 'false',
         ]);
     }
 
