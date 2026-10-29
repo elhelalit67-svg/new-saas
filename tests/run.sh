@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 php -l app/index.php
+php -l src/HttpApplication.php
 php -l src/TenantContext.php
 php -l src/TenantMembershipRepository.php
 php -l src/SessionSecurity.php
