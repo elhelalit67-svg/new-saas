@@ -168,8 +168,8 @@ try {
         throw new RuntimeException('Rate-limit bucket leaked across tenant boundaries.');
     }
     LoginRateLimiter::clearIdentityFailures($pdo, $alphaId, 'alpha.integration@example.test', '192.0.2.20');
-    if (LoginRateLimiter::isBlocked($pdo, $alphaId, 'alpha.integration@example.test', '192.0.2.20')) {
-        throw new RuntimeException('Successful-login cleanup did not clear the identity/IP bucket.');
+    if (LoginRateLimiter::isBlocked($pdo, $alphaId, 'alpha.integration@example.test', '192.0.2.21')) {
+        throw new RuntimeException('Cleared identity/IP bucket unexpectedly blocked a new source IP.');
     }
     if (!LoginRateLimiter::isBlocked($pdo, $alphaId, 'different@example.test', '192.0.2.20')) {
         throw new RuntimeException('Clearing one identity incorrectly cleared the source IP bucket.');
