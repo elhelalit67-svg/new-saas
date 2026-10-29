@@ -104,7 +104,6 @@ try {
     $alphaStaffId = (int)$insertUser->fetchColumn();
 
     $alphaRepo->add($alphaUserId, $alphaStaffId, 'teacher');
-    $alphaRepo->add($betaUserId, $betaUserId, 'teacher'); // This is intentionally a valid second-tenant user.
     $betaRepo->add($betaUserId, $betaUserId, 'teacher');
 
     $alphaMembers = $alphaRepo->listActive($alphaUserId);
