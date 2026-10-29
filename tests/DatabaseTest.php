@@ -11,14 +11,67 @@ foreach ($keys as $key) {
     putenv($key);
 }
 
+function expectDatabaseConfigError(array $values, string $expectedMessage): void
+{
+    foreach ($values as $key => $value) {
+        putenv($key . '=' . $value);
+    }
+
+    try {
+        Database::connect();
+        throw new RuntimeException('Expected configuration validation to fail.');
+    } catch (RuntimeException $exception) {
+        if (!str_contains($exception->getMessage(), $expectedMessage)) {
+            throw new RuntimeException(
+                "Expected error containing '{$expectedMessage}', got '{$exception->getMessage()}'."
+            );
+        }
+    } finally {
+        foreach ($values as $key => $_value) {
+            putenv($key);
+        }
+    }
+}
+
+$valid = [
+    'DB_HOST' => 'localhost',
+    'DB_PORT' => '5432',
+    'DB_NAME' => 'alq_test',
+    'DB_USER' => 'test_user',
+    'DB_PASSWORD' => 'test_password',
+    'DB_SSLMODE' => 'require',
+];
+
 try {
-    Database::connect();
-    fwrite(STDERR, "FAIL: missing DB configuration should be rejected.\n");
-    exit(1);
-} catch (RuntimeException $exception) {
-    if (!str_contains($exception->getMessage(), 'DB_HOST')) {
-        fwrite(STDERR, "FAIL: unexpected configuration error: " . $exception->getMessage() . "\n");
-        exit(1);
+    try {
+        Database::connect();
+        throw new RuntimeException('Expected missing database configuration to fail.');
+    } catch (RuntimeException $exception) {
+        if (!str_contains($exception->getMessage(), 'DB_HOST')) {
+            throw new RuntimeException('Missing configuration was not rejected as expected.');
+        }
+    }
+
+    expectDatabaseConfigError($valid + ['DB_PORT' => '65536'], 'DB_PORT');
+    expectDatabaseConfigError($valid + ['DB_NAME' => 'bad;dbname=other'], 'DB_NAME');
+    expectDatabaseConfigError($valid + ['DB_HOST' => 'db;sslmode=disable'], 'DB_HOST');
+    expectDatabaseConfigError($valid + ['DB_SSLMODE' => 'unsafe'], 'DB_SSLMODE');
+
+    // On runtimes without pdo_pgsql, valid configuration must fail explicitly
+    // rather than silently falling back to another driver or credentials.
+    foreach ($valid as $key => $value) {
+        putenv($key . '=' . $value);
+    }
+    try {
+        Database::connect();
+        if (!extension_loaded('pdo_pgsql')) {
+            throw new RuntimeException('Expected the missing pdo_pgsql extension to be reported.');
+        }
+    } catch (RuntimeException $exception) {
+        if (!extension_loaded('pdo_pgsql') &&
+            !str_contains($exception->getMessage(), 'pdo_pgsql')) {
+            throw $exception;
+        }
     }
 } finally {
     foreach ($saved as $key => $value) {
@@ -30,4 +83,4 @@ try {
     }
 }
 
-echo "Database configuration tests passed (missing-secret fail-closed case).\n";
+echo "Database configuration tests passed (missing config, port, database name, host and SSL mode).\n";
