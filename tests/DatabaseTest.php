@@ -52,10 +52,10 @@ try {
         }
     }
 
-    expectDatabaseConfigError($valid + ['DB_PORT' => '65536'], 'DB_PORT');
-    expectDatabaseConfigError($valid + ['DB_NAME' => 'bad;dbname=other'], 'DB_NAME');
-    expectDatabaseConfigError($valid + ['DB_HOST' => 'db;sslmode=disable'], 'DB_HOST');
-    expectDatabaseConfigError($valid + ['DB_SSLMODE' => 'unsafe'], 'DB_SSLMODE');
+    expectDatabaseConfigError(array_replace($valid, ['DB_PORT' => '65536']), 'DB_PORT');
+    expectDatabaseConfigError(array_replace($valid, ['DB_NAME' => 'bad;dbname=other']), 'DB_NAME');
+    expectDatabaseConfigError(array_replace($valid, ['DB_HOST' => 'db;sslmode=disable']), 'DB_HOST');
+    expectDatabaseConfigError(array_replace($valid, ['DB_SSLMODE' => 'unsafe']), 'DB_SSLMODE');
 
     // On runtimes without pdo_pgsql, valid configuration must fail explicitly
     // rather than silently falling back to another driver or credentials.
