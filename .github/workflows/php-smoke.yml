@@ -23,3 +23,5 @@ jobs:
         run: php -l app/index.php
       - name: Run smoke checks
         run: sh tests/smoke.sh
+      - name: Run tenant hostname tests
+        run: php tests/TenantContextTest.php
