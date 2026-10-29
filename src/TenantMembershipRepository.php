@@ -58,6 +58,34 @@ final class TenantMembershipRepository
     }
 
     /**
+     * List active and inactive memberships for the management screen.
+     *
+     * @return list<array{id:int,email:string,display_name:string,role:string,status:string}>
+     */
+    public function listForManagement(int $actorUserId): array
+    {
+        $this->requireManager($actorUserId);
+
+        $stmt = $this->pdo->prepare(
+            "SELECT u.id, u.email, u.display_name, m.role, m.status
+             FROM tenant_memberships m
+             JOIN users u ON u.id = m.user_id
+             WHERE m.tenant_id = :tenant_id
+             ORDER BY u.id, m.role"
+        );
+        $stmt->execute(['tenant_id' => $this->tenantId]);
+
+        /** @var list<array{id:int,email:string,display_name:string,role:string,status:string}> $rows */
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as &$row) {
+            $row['id'] = (int)$row['id'];
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    /**
      * Create a membership in this tenant after verifying the actor's role.
      * Only owners can grant owner/admin roles; owners and admins can grant
      * non-administrative roles. The database validates allowed role values.
