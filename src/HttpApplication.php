@@ -151,7 +151,8 @@ final class HttpApplication
         $token = self::escape(SessionSecurity::csrfToken());
         header('Content-Type: text/html; charset=UTF-8');
         echo self::page('لوحة التحكم', '<h1>أهلًا بك</h1><p>تم تسجيل الدخول بنجاح.</p><p>معرّف المستخدم: ' .
-            self::escape((string)$userId) . '</p><p>هذه لوحة أولية؛ إدارة المدرسين والطلاب لم تُنفّذ بعد.</p>' .
+            self::escape((string)$userId) . '</p><p>إدارة الأعضاء متاحة لمالك السنتر والمدير.</p>' .
+            '<p><a href="?action=members">إدارة أعضاء السنتر</a></p>' .
             '<form method="post" action="?action=logout"><input type="hidden" name="_csrf" value="' . $token .
             '"><button type="submit">تسجيل الخروج</button></form>');
     }
