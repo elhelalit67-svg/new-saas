@@ -207,4 +207,4 @@ try {
     $pdo->rollBack();
 }
 
-echo "Tenant resolution and tenant-scoped membership integration tests passed.\n";
+echo "Tenant resolution, tenant-scoped membership, authentication and login throttling integration tests passed.\n";
