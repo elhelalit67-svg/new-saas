@@ -51,6 +51,17 @@ CREATE TABLE IF NOT EXISTS tenant_memberships (
 );
 CREATE INDEX IF NOT EXISTS tenant_memberships_user_id_idx ON tenant_memberships(user_id);
 
+CREATE TABLE IF NOT EXISTS auth_login_attempts (
+    tenant_id BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    bucket_key CHAR(64) NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+    window_started_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (tenant_id, bucket_key)
+);
+CREATE INDEX IF NOT EXISTS auth_login_attempts_updated_at_idx
+    ON auth_login_attempts(updated_at);
+
 CREATE TABLE IF NOT EXISTS platform_audit_events (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     actor_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
