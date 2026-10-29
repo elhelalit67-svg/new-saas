@@ -8,7 +8,7 @@
 - `TenantMembershipRepository::forHost()` creates a membership repository only after server-side host resolution. Its reads and writes always bind the resolved tenant ID; callers do not pass tenant IDs to membership methods.
 - SQL statements use bound parameters for values.
 - Database credentials come from environment configuration; PostgreSQL TLS is required by default in the connection factory.
-- `SessionSecurity` provides hardened cookie/session settings, session ID rotation, random CSRF tokens with constant-time verification, and session destruction. It is a tested helper only; no login or HTTP routes call it yet.
+- `SessionSecurity` provides hardened cookie/session settings, session ID rotation, random CSRF tokens with constant-time verification, and session destruction. Authenticated identities expire after 30 minutes of inactivity or 12 hours absolute; expiry clears the identity and invalidates the CSRF token. It is a tested helper only; no login or HTTP routes call it yet.
 - `AuthService` verifies stored password hashes, requires active membership in the hostname-resolved tenant, rotates the session ID and CSRF token after login, and revalidates the active user/membership and tenant host on each identity lookup. It is a service layer only; no HTTP routes call it yet.
 
 ## Required controls before handling real student/financial data
