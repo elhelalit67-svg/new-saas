@@ -187,8 +187,10 @@ final class HttpApplication
 
     private static function isSecureTransport(): bool
     {
-        return isset($_SERVER['HTTPS']) && is_string($_SERVER['HTTPS']) &&
-            $_SERVER['HTTPS'] !== '' && strtolower($_SERVER['HTTPS']) !== 'off';
+        if (!isset($_SERVER['HTTPS']) || !is_string($_SERVER['HTTPS'])) {
+            return false;
+        }
+        return in_array(strtolower($_SERVER['HTTPS']), ['on', '1', 'true'], true);
     }
 
     private static function respond(int $status, string $message): void
