@@ -6,6 +6,7 @@ require_once __DIR__ . '/../src/TenantContext.php';
 require_once __DIR__ . '/../src/TenantMembershipRepository.php';
 require_once __DIR__ . '/../src/SessionSecurity.php';
 require_once __DIR__ . '/../src/AuthService.php';
+require_once __DIR__ . '/../src/LoginRateLimiter.php';
 
 $migrationPath = __DIR__ . '/../database/migrations/001_platform_foundation.sql';
 $migration = file_get_contents($migrationPath);
@@ -147,6 +148,31 @@ try {
     $betaIds = array_column($betaMembers, 'id');
     if (!in_array($betaUserId, $betaIds, true)) {
         throw new RuntimeException('Tenant B membership was affected by Tenant A operations.');
+    }
+
+    // Exercise keyed login throttling without persisting raw emails or IPs.
+    putenv('AUTH_RATE_LIMIT_KEY=integration-only-key-with-at-least-32-characters');
+    if (LoginRateLimiter::isBlocked($pdo, $alphaId, 'alpha.integration@example.test', '192.0.2.20')) {
+        throw new RuntimeException('New login rate-limit bucket unexpectedly started blocked.');
+    }
+    for ($i = 0; $i < 5; $i++) {
+        LoginRateLimiter::recordFailure($pdo, $alphaId, 'alpha.integration@example.test', '192.0.2.20');
+    }
+    if (!LoginRateLimiter::isBlocked($pdo, $alphaId, 'alpha.integration@example.test', '192.0.2.20')) {
+        throw new RuntimeException('Repeated failures did not block the identity/IP bucket.');
+    }
+    if (!LoginRateLimiter::isBlocked($pdo, $alphaId, 'different@example.test', '192.0.2.20')) {
+        throw new RuntimeException('Repeated failures did not block the source IP bucket.');
+    }
+    if (LoginRateLimiter::isBlocked($pdo, $betaId, 'alpha.integration@example.test', '192.0.2.20')) {
+        throw new RuntimeException('Rate-limit bucket leaked across tenant boundaries.');
+    }
+    LoginRateLimiter::clearIdentityFailures($pdo, $alphaId, 'alpha.integration@example.test', '192.0.2.20');
+    if (LoginRateLimiter::isBlocked($pdo, $alphaId, 'alpha.integration@example.test', '192.0.2.20')) {
+        throw new RuntimeException('Successful-login cleanup did not clear the identity/IP bucket.');
+    }
+    if (!LoginRateLimiter::isBlocked($pdo, $alphaId, 'different@example.test', '192.0.2.20')) {
+        throw new RuntimeException('Clearing one identity incorrectly cleared the source IP bucket.');
     }
 
     // Exercise tenant-aware password login and request-time membership checks.
