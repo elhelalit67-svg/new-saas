@@ -88,28 +88,61 @@ try {
         throw new RuntimeException('Could not create repositories for valid tenant hosts.');
     }
 
-    $alphaRepo->add($alphaUserId, 'teacher');
-    $betaRepo->add($betaUserId, 'teacher');
+    // Seed owner memberships directly as trusted fixture setup.
+    $insertMembership = $pdo->prepare(
+        'INSERT INTO tenant_memberships (tenant_id, user_id, role)
+         VALUES (:tenant_id, :user_id, :role)'
+    );
+    $insertMembership->execute(['tenant_id' => $alphaId, 'user_id' => $alphaUserId, 'role' => 'center_owner']);
+    $insertMembership->execute(['tenant_id' => $betaId, 'user_id' => $betaUserId, 'role' => 'center_owner']);
 
-    $alphaMembers = $alphaRepo->listActive();
-    if (count($alphaMembers) !== 1 || $alphaMembers[0]['id'] !== $alphaUserId) {
+    $insertUser->execute([
+        'email' => 'alpha.staff@example.test',
+        'password_hash' => password_hash('integration-only-secret', PASSWORD_DEFAULT),
+        'display_name' => 'Alpha Staff',
+    ]);
+    $alphaStaffId = (int)$insertUser->fetchColumn();
+
+    $alphaRepo->add($alphaUserId, $alphaStaffId, 'teacher');
+    $alphaRepo->add($betaUserId, $betaUserId, 'teacher'); // This is intentionally a valid second-tenant user.
+    $betaRepo->add($betaUserId, $betaUserId, 'teacher');
+
+    $alphaMembers = $alphaRepo->listActive($alphaUserId);
+    $alphaIds = array_column($alphaMembers, 'id');
+    if (!in_array($alphaUserId, $alphaIds, true) || !in_array($alphaStaffId, $alphaIds, true) ||
+        in_array($betaUserId, $alphaIds, true)) {
         throw new RuntimeException('Tenant A membership listing leaked or omitted a user.');
     }
 
-    if ($betaRepo->setMembershipStatus($alphaUserId, 'teacher', 'inactive')) {
-        throw new RuntimeException('Tenant B repository modified a membership owned by tenant A.');
+    // A manager in Tenant B is not authorized to operate on Tenant A, even if
+    // they know the IDs. Authentication/session code must supply this actor ID.
+    $denied = false;
+    try {
+        $alphaRepo->listActive($betaUserId);
+    } catch (DomainException) {
+        $denied = true;
+    }
+    if (!$denied) {
+        throw new RuntimeException('Tenant B manager was authorized in Tenant A.');
     }
 
-    if (!$alphaRepo->setMembershipStatus($alphaUserId, 'teacher', 'inactive')) {
-        throw new RuntimeException('Tenant A repository could not update its own membership.');
+    // Tenant A's owner cannot mutate Tenant B membership through Tenant A's repo.
+    if ($alphaRepo->setMembershipStatus($alphaUserId, $betaUserId, 'teacher', 'inactive')) {
+        throw new RuntimeException('Tenant A repository modified a membership owned by Tenant B.');
     }
 
-    if ($alphaRepo->listActive() !== []) {
-        throw new RuntimeException('Inactive membership remained visible in active membership listing.');
+    if (!$alphaRepo->setMembershipStatus($alphaUserId, $alphaStaffId, 'teacher', 'inactive')) {
+        throw new RuntimeException('Tenant A owner could not update its own membership.');
     }
 
-    $betaMembers = $betaRepo->listActive();
-    if (count($betaMembers) !== 1 || $betaMembers[0]['id'] !== $betaUserId) {
+    $alphaActive = $alphaRepo->listActive($alphaUserId);
+    if (count($alphaActive) !== 1 || $alphaActive[0]['id'] !== $alphaUserId) {
+        throw new RuntimeException('Inactive membership remained visible or Tenant A data was leaked.');
+    }
+
+    $betaMembers = $betaRepo->listActive($betaUserId);
+    $betaIds = array_column($betaMembers, 'id');
+    if (!in_array($betaUserId, $betaIds, true)) {
         throw new RuntimeException('Tenant B membership was affected by Tenant A operations.');
     }
 } finally {
