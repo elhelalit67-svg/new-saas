@@ -7,7 +7,8 @@ The audited repository is a minimal PHP starter. No framework, database, router,
 
 ## Implemented foundation on the development branch
 - `database/migrations/001_platform_foundation.sql` defines PostgreSQL tables for tenants, domain mappings, users, tenant memberships and platform audit events. This migration has not been applied to any database.
-- `src/TenantContext.php` normalizes DNS hostnames and resolves only active, verified domain mappings using a parameterized query. It is not yet wired into an HTTP router, login flow, or tenant-scoped repository layer.
+- `src/TenantContext.php` normalizes DNS hostnames and resolves only active, verified domain mappings using a parameterized query.
+- `src/TenantMembershipRepository.php` resolves tenant context from the host and scopes membership reads/writes to that tenant. It requires an active owner/admin membership in the same tenant; only owners may grant owner/admin roles. Actor IDs must come from a server-validated session, never request data. This is a first vertical slice and is not yet wired into authenticated HTTP routes.
 - `src/Database.php` creates a PDO PostgreSQL connection from environment variables only, validates connection parameters, defaults to TLS-required mode, and disables emulated prepares. No credentials are committed and no connection is opened during normal page requests yet.
 - `tests/TenantContextTest.php` covers hostname normalization edge cases.
 - `tests/DatabaseTest.php` covers missing configuration and invalid host, database, port and SSL-mode values without contacting a database.
