@@ -5,6 +5,11 @@ This document records intended architecture, not a claim that these components a
 ## Current state
 The audited repository is a minimal PHP starter. No framework, database, router, authentication, queues, storage provider or test framework was detected in the repository tree.
 
+## Implemented foundation on the development branch
+- `database/migrations/001_platform_foundation.sql` defines PostgreSQL tables for tenants, domain mappings, users, tenant memberships and platform audit events. This migration has not been applied to any database.
+- `src/TenantContext.php` normalizes DNS hostnames and resolves only active, verified domain mappings using a parameterized query. It is not yet wired into an HTTP router, login flow, or tenant-scoped repository layer.
+- `tests/TenantContextTest.php` covers hostname normalization edge cases. Tests have been added to CI, but execution has not yet been observed.
+
 ## Proposed initial shape
 - PHP application with a small front controller and explicit routes.
 - Environment-based configuration; no secrets committed.
