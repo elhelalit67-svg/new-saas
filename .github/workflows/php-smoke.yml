@@ -11,6 +11,28 @@ permissions:
 jobs:
   smoke:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: alq_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d alq_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      DB_NAME: alq_test
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSLMODE: disable
+    runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -27,9 +49,12 @@ jobs:
           php -l src/Database.php
           php -l tests/TenantContextTest.php
           php -l tests/DatabaseTest.php
+          php -l tests/TenantContextIntegrationTest.php
       - name: Run smoke checks
         run: sh tests/smoke.sh
       - name: Run tenant hostname tests
         run: php tests/TenantContextTest.php
       - name: Run database configuration tests
         run: php tests/DatabaseTest.php
+      - name: Run PostgreSQL tenant resolution integration tests
+        run: php tests/TenantContextIntegrationTest.php
