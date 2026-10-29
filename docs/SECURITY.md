@@ -10,13 +10,15 @@
 - Database credentials come from environment configuration; PostgreSQL TLS is required by default in the connection factory.
 - `SessionSecurity` provides hardened cookie/session settings, session ID rotation, random CSRF tokens with constant-time verification, and session destruction. Authenticated identities expire after 30 minutes of inactivity or 12 hours absolute; expiry clears the identity and invalidates the CSRF token. It is a tested helper only; no login or HTTP routes call it yet.
 - `AuthService` verifies stored password hashes, requires active membership in the hostname-resolved tenant, rotates the session ID and CSRF token after login, and revalidates the active user/membership and tenant host on each identity lookup. It is a service layer only; no HTTP routes call it yet.
+- `LoginRateLimiter` stores tenant-scoped, keyed hashes for email/IP and IP-only buckets in PostgreSQL; raw emails and IP addresses are not stored in the rate-limit table. It requires `AUTH_RATE_LIMIT_KEY` (at least 32 characters), stable across app instances. This is a tested helper only; the future login route must check the limiter before password verification, record failed attempts, and clear the identity/IP bucket after successful login.
 
 ## Required controls before handling real student/financial data
 - Password hashing via PHP's password API or a maintained framework equivalent.
 - Secure, HttpOnly and SameSite session cookies; session ID rotation after authentication; logout/session expiry.
 - CSRF protection for state-changing browser requests.
 - Output escaping and context-aware input validation.
-- Rate limits on authentication, OTP and expensive endpoints.
+- Wire `LoginRateLimiter` into authentication routes and configure a high-entropy `AUTH_RATE_LIMIT_KEY` outside source control.
+- Rate limits on OTP and expensive endpoints.
 - Server-side authentication and authorization on every resource operation.
 - Tenant context derived from a verified active host mapping, not request parameters.
 - Extend tenant-scoped access to every tenant-owned table, API, report, export, queue job, file, receipt and webhook; the membership repository is only the first vertical slice.
