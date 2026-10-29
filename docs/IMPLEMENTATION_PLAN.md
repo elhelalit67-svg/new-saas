@@ -16,7 +16,8 @@ Status labels: TODO, IN PROGRESS, BLOCKED, DONE, VERIFIED, DEPLOYED. DONE means 
 - [x] Add hostname normalization tests.
 - [x] Add environment-only PDO PostgreSQL connection factory with input validation and TLS-required default.
 - [x] Add database configuration tests for missing/invalid settings.
-- [ ] Add DB configuration and migration runner after confirming production DB environment.
+- [x] Add PostgreSQL integration test for active/verified domain resolution against a disposable CI database.
+- [ ] Add a production-safe migration runner after confirming the database environment and migration policy.
 - [ ] Add login, secure sessions, CSRF protection and password-reset policy.
 - [ ] Add centralized tenant-scoped data-access layer and resource authorization.
 - [ ] Add integration tests against PostgreSQL and tenant boundary tests.
