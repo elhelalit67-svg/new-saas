@@ -1,17 +1,23 @@
 # Security Baseline
 
 ## Confirmed issue
-- `app/info.php` invokes `phpinfo()`. This can reveal PHP configuration and runtime details if publicly reachable. Remove it from deployed application paths; use authenticated, controlled diagnostics instead.
+- The original repository exposed a `phpinfo()` endpoint at `app/info.php`. It was removed from the development branch; confirm it is absent from any deployed artifact before release.
+
+## Implemented foundation (not a complete security assessment)
+- Tenant host resolution accepts only normalized ASCII DNS hostnames and resolves only active, verified mappings to active tenants.
+- `TenantMembershipRepository::forHost()` creates a membership repository only after server-side host resolution. Its reads and writes always bind the resolved tenant ID; callers do not pass tenant IDs to membership methods.
+- SQL statements use bound parameters for values.
+- Database credentials come from environment configuration; PostgreSQL TLS is required by default in the connection factory.
 
 ## Required controls before handling real student/financial data
 - Password hashing via PHP's password API or a maintained framework equivalent.
 - Secure, HttpOnly and SameSite session cookies; session ID rotation after authentication; logout/session expiry.
 - CSRF protection for state-changing browser requests.
 - Output escaping and context-aware input validation.
-- Parameterized database queries.
 - Rate limits on authentication, OTP and expensive endpoints.
-- Server-side authorization on every resource operation.
+- Server-side authentication and authorization on every resource operation.
 - Tenant context derived from a verified active host mapping, not request parameters.
+- Extend tenant-scoped access to every tenant-owned table, API, report, export, queue job, file, receipt and webhook; the membership repository is only the first vertical slice.
 - Private file storage with authorization checks or short-lived signed URLs.
 - Strict upload size/type validation, randomized storage names and storage outside executable web paths.
 - Secrets supplied through hosting environment configuration; never commit tokens or credentials.
@@ -21,6 +27,7 @@
 
 ## Multi-tenant test cases
 - Tenant A cannot read, modify, enumerate or export Tenant B resources by changing IDs.
+- The membership integration test checks that Tenant A's listing excludes Tenant B members, Tenant B cannot change Tenant A's membership, and each tenant's own membership operations remain independent.
 - Unknown/inactive hosts fail closed.
 - API calls without valid tenant context fail closed.
 - Queue jobs validate tenant context.
@@ -32,4 +39,4 @@
 Do not log passwords, access tokens, OTPs, full payment credentials or unnecessary sensitive student information. Define retention and export policies before production launch.
 
 ## Status
-This is a baseline checklist, not a completed security assessment. No dynamic security scan or runtime penetration test was performed during the initial repository inspection.
+This is a baseline checklist, not a completed security assessment. PostgreSQL integration tests must pass in CI before the new membership isolation checks are considered verified. No dynamic security scan or runtime penetration test has been performed.
