@@ -9,6 +9,7 @@
 - SQL statements use bound parameters for values.
 - Database credentials come from environment configuration; PostgreSQL TLS is required by default in the connection factory.
 - `SessionSecurity` provides hardened cookie/session settings, session ID rotation, random CSRF tokens with constant-time verification, and session destruction. It is a tested helper only; no login or HTTP routes call it yet.
+- `AuthService` verifies stored password hashes, requires active membership in the hostname-resolved tenant, rotates the session ID and CSRF token after login, and revalidates the active user/membership and tenant host on each identity lookup. It is a service layer only; no HTTP routes call it yet.
 
 ## Required controls before handling real student/financial data
 - Password hashing via PHP's password API or a maintained framework equivalent.
