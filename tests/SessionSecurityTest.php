@@ -48,6 +48,14 @@ try {
     if (!SessionSecurity::verifyCsrfToken(SessionSecurity::csrfToken())) {
         throw new RuntimeException('Post-authentication CSRF token did not validate.');
     }
+
+    $_SESSION['auth_last_seen'] = time() - 1801;
+    if (SessionSecurity::authenticatedIdentity() !== null) {
+        throw new RuntimeException('Idle-expired authenticated session was accepted.');
+    }
+    if (SessionSecurity::verifyCsrfToken(SessionSecurity::csrfToken())) {
+        throw new RuntimeException('CSRF token was not rotated after session expiry.');
+    }
 } finally {
     if (session_status() === PHP_SESSION_ACTIVE) {
         SessionSecurity::destroy();
