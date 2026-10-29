@@ -53,6 +53,7 @@ jobs:
           php -l tests/TenantContextTest.php
           php -l tests/DatabaseTest.php
           php -l tests/SessionSecurityTest.php
+          php -l tests/LoginRateLimiterTest.php
           php -l tests/TenantContextIntegrationTest.php
       - name: Run smoke checks
         run: sh tests/smoke.sh
