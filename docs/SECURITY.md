@@ -8,6 +8,7 @@
 - `TenantMembershipRepository::forHost()` creates a membership repository only after server-side host resolution. Its reads and writes always bind the resolved tenant ID; callers do not pass tenant IDs to membership methods.
 - SQL statements use bound parameters for values.
 - Database credentials come from environment configuration; PostgreSQL TLS is required by default in the connection factory.
+- `SessionSecurity` provides hardened cookie/session settings, session ID rotation, random CSRF tokens with constant-time verification, and session destruction. It is a tested helper only; no login or HTTP routes call it yet.
 
 ## Required controls before handling real student/financial data
 - Password hashing via PHP's password API or a maintained framework equivalent.
