@@ -8,11 +8,13 @@ php -l src/SessionSecurity.php
 php -l src/AuthService.php
 php -l src/LoginRateLimiter.php
 php -l src/Database.php
+php -l tests/HttpApplicationTest.php
 php -l tests/TenantContextTest.php
 php -l tests/DatabaseTest.php
 php -l tests/SessionSecurityTest.php
 php -l tests/LoginRateLimiterTest.php
 php -l tests/TenantContextIntegrationTest.php
+php tests/HttpApplicationTest.php
 php tests/TenantContextTest.php
 php tests/DatabaseTest.php
 php tests/SessionSecurityTest.php
