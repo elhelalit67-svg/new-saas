@@ -18,10 +18,18 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.2"
+          extensions: pdo_pgsql
           coverage: none
       - name: Lint PHP
-        run: php -l app/index.php
+        run: |
+          php -l app/index.php
+          php -l src/TenantContext.php
+          php -l src/Database.php
+          php -l tests/TenantContextTest.php
+          php -l tests/DatabaseTest.php
       - name: Run smoke checks
         run: sh tests/smoke.sh
       - name: Run tenant hostname tests
         run: php tests/TenantContextTest.php
+      - name: Run database configuration tests
+        run: php tests/DatabaseTest.php
