@@ -51,6 +51,7 @@ jobs:
           php -l src/SessionSecurity.php
           php -l src/AuthService.php
           php -l src/LoginRateLimiter.php
+          php -l tests/HttpApplicationTest.php
           php -l tests/TenantContextTest.php
           php -l tests/DatabaseTest.php
           php -l tests/SessionSecurityTest.php
@@ -58,6 +59,8 @@ jobs:
           php -l tests/TenantContextIntegrationTest.php
       - name: Run smoke checks
         run: sh tests/smoke.sh
+      - name: Run HTTP transport boundary tests
+        run: php tests/HttpApplicationTest.php
       - name: Run tenant hostname tests
         run: php tests/TenantContextTest.php
       - name: Run database configuration tests
