@@ -5,19 +5,20 @@ Status labels: TODO, IN PROGRESS, BLOCKED, DONE, VERIFIED, DEPLOYED. DONE means 
 ## Phase 0 — Audit and safe baseline
 - [x] Inventory repository tree and initial commit.
 - [x] Record confirmed stack and current limitations.
-- [ ] Remove public PHP diagnostics endpoint.
-- [ ] Replace sample output with a minimal, testable application entry point.
-- [ ] Add runtime instructions and a repeatable local smoke test.
+- [x] Remove public PHP diagnostics endpoint from the development branch.
+- [x] Replace sample output with a minimal informational entry point.
+- [x] Add PHP lint/smoke workflow.
 - [ ] Verify Wasmer deployment configuration and live response.
 
 ## Phase 1 — Application foundation
-- [ ] Select/confirm supported PHP runtime and dependency strategy.
-- [ ] Add environment-based configuration and fail-safe defaults.
-- [ ] Select a supported relational database based on actual hosting capabilities.
-- [ ] Add migrations, request routing, error handling, structured logs and health checks.
-- [ ] Add authentication, session protections, RBAC and audit logging.
-- [ ] Implement tenant resolution from verified hostnames and centralized tenant scoping.
-- [ ] Add automated tests and CI.
+- [x] Draft PostgreSQL schema for tenants, verified domains, users, memberships and platform audit events.
+- [x] Add fail-closed hostname normalization and verified-domain resolution primitive.
+- [x] Add hostname normalization tests.
+- [ ] Add DB configuration and migration runner after confirming production DB environment.
+- [ ] Add login, secure sessions, CSRF protection and password-reset policy.
+- [ ] Add centralized tenant-scoped data-access layer and resource authorization.
+- [ ] Add integration tests against PostgreSQL and tenant boundary tests.
+- [ ] Confirm PHP runtime/extensions and CI results.
 
 ## Phase 2 — Core center operations
 - [ ] Academic years/terms, branches, rooms, subjects, teachers, groups and students.
@@ -58,10 +59,11 @@ Status labels: TODO, IN PROGRESS, BLOCKED, DONE, VERIFIED, DEPLOYED. DONE means 
 - [ ] Production deployment only with explicit approval.
 
 ## Architecture decision principles
-- Prefer a shared relational database with mandatory tenant scoping as the initial default only if hosting supports it; enforce scope in a central data-access/service layer and test it. Revisit database-per-tenant if isolation/compliance/scale requirements justify the operational cost.
-- Never trust a tenant ID supplied by a browser. Resolve tenant from a verified host mapping and bind tenant context server-side.
+- A shared PostgreSQL database is the current candidate, not a final hosting decision. Validate Wasmer support, backups, connection limits and cost before provisioning.
+- Tenant context is resolved from an active, verified hostname mapping; never accept client-supplied tenant context as authority.
+- Tenant-owned reads/writes must be scoped centrally. The hostname resolver alone does not guarantee complete tenant isolation.
 - Financial records should use append-only payment/refund events and transactional updates; never silently overwrite confirmed transactions.
 - External services remain disabled/configuration-free until approved.
 
 ## Current priority
-Address the diagnostic endpoint and establish a real, testable baseline before implementing student or financial modules. Do not claim a feature is production-ready without automated tests and deployment evidence.
+Finish the safe application foundation and test it before implementing student or financial modules. Do not claim a feature is production-ready without automated tests and deployment evidence.
