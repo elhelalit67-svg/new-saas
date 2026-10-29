@@ -6,6 +6,7 @@ require_once __DIR__ . '/TenantContext.php';
 require_once __DIR__ . '/SessionSecurity.php';
 require_once __DIR__ . '/AuthService.php';
 require_once __DIR__ . '/LoginRateLimiter.php';
+require_once __DIR__ . '/TenantMembershipRepository.php';
 
 /**
  * Minimal HTTP adapter for the existing authentication services.
@@ -48,6 +49,14 @@ final class HttpApplication
             }
             if ($action === 'dashboard') {
                 self::dashboard($pdo, $host);
+                return;
+            }
+            if ($action === 'members') {
+                self::members($pdo, $host);
+                return;
+            }
+            if ($action === 'membership-status') {
+                self::updateMembershipStatus($pdo, $host);
                 return;
             }
 
@@ -147,6 +156,118 @@ final class HttpApplication
             '"><button type="submit">تسجيل الخروج</button></form>');
     }
 
+    private static function members(PDO $pdo, string $host): void
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+            header('Allow: GET');
+            self::respond(405, 'طريقة الطلب غير مسموح بها.');
+            return;
+        }
+
+        $actorId = AuthService::currentUserId($pdo, $host);
+        if ($actorId === null) {
+            header('Location: ?action=login', true, 303);
+            return;
+        }
+
+        $repository = TenantMembershipRepository::forHost($pdo, $host);
+        if ($repository === null) {
+            self::respond(404, 'الصفحة غير متاحة لهذا النطاق.');
+            return;
+        }
+
+        try {
+            $members = $repository->listForManagement($actorId);
+        } catch (DomainException) {
+            self::respond(403, 'ليس لديك صلاحية إدارة أعضاء السنتر.');
+            return;
+        }
+
+        $rows = '';
+        foreach ($members as $member) {
+            $id = self::escape((string)$member['id']);
+            $role = self::escape($member['role']);
+            $status = self::escape($member['status']);
+            $displayName = self::escape($member['display_name']);
+            $email = self::escape($member['email']);
+            $rows .= '<tr><td>' . $displayName . '</td><td>' . $email . '</td><td>' . $role .
+                '</td><td>' . $status . '</td><td>';
+            if ($member['role'] !== 'center_owner' || $member['status'] !== 'active') {
+                $nextStatus = $member['status'] === 'active' ? 'inactive' : 'active';
+                $buttonLabel = $nextStatus === 'active' ? 'تفعيل' : 'إيقاف';
+                $rows .= '<form method="post" action="?action=membership-status">' .
+                    '<input type="hidden" name="_csrf" value="' . self::escape(SessionSecurity::csrfToken()) . '">' .
+                    '<input type="hidden" name="user_id" value="' . $id . '">' .
+                    '<input type="hidden" name="role" value="' . $role . '">' .
+                    '<input type="hidden" name="status" value="' . self::escape($nextStatus) . '">' .
+                    '<button type="submit">' . $buttonLabel . '</button></form>';
+            }
+            $rows .= '</td></tr>';
+        }
+
+        $token = self::escape(SessionSecurity::csrfToken());
+        header('Content-Type: text/html; charset=UTF-8');
+        echo self::page('أعضاء السنتر',
+            '<h1>أعضاء السنتر</h1><p>إدارة العضويات الحالية فقط. إضافة أعضاء جدد ودعوات الانضمام لم تُنفّذ بعد.</p>' .
+            '<table><thead><tr><th>الاسم</th><th>البريد الإلكتروني</th><th>الدور</th><th>الحالة</th><th>الإجراء</th></tr></thead>' .
+            '<tbody>' . $rows . '</tbody></table>' .
+            '<p><a href="?action=dashboard">العودة للوحة التحكم</a></p>' .
+            '<form method="post" action="?action=logout"><input type="hidden" name="_csrf" value="' . $token .
+            '"><button type="submit">تسجيل الخروج</button></form>');
+    }
+
+    private static function updateMembershipStatus(PDO $pdo, string $host): void
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+            header('Allow: POST');
+            self::respond(405, 'تغيير العضوية يتطلب طلب POST.');
+            return;
+        }
+        if (!SessionSecurity::verifyCsrfToken($_POST['_csrf'] ?? null)) {
+            self::respond(403, 'انتهت صلاحية الطلب. حدّث الصفحة وحاول مرة أخرى.');
+            return;
+        }
+
+        $actorId = AuthService::currentUserId($pdo, $host);
+        if ($actorId === null) {
+            header('Location: ?action=login', true, 303);
+            return;
+        }
+
+        $userIdRaw = $_POST['user_id'] ?? null;
+        $role = $_POST['role'] ?? null;
+        $status = $_POST['status'] ?? null;
+        if (!is_string($userIdRaw) || filter_var($userIdRaw, FILTER_VALIDATE_INT) === false ||
+            (int)$userIdRaw < 1 || !is_string($role) ||
+            !in_array($role, ['center_owner', 'center_admin', 'reception', 'accountant', 'teacher', 'student', 'guardian'], true) ||
+            !is_string($status) || !in_array($status, ['active', 'inactive'], true)) {
+            self::respond(400, 'بيانات العضوية غير صالحة.');
+            return;
+        }
+
+        $repository = TenantMembershipRepository::forHost($pdo, $host);
+        if ($repository === null) {
+            self::respond(404, 'الصفحة غير متاحة لهذا النطاق.');
+            return;
+        }
+
+        try {
+            $changed = $repository->setMembershipStatus($actorId, (int)$userIdRaw, $role, $status);
+        } catch (DomainException) {
+            self::respond(403, 'ليس لديك صلاحية تنفيذ هذا الإجراء.');
+            return;
+        } catch (InvalidArgumentException) {
+            self::respond(400, 'بيانات العضوية غير صالحة.');
+            return;
+        }
+
+        if (!$changed) {
+            self::respond(404, 'العضوية المطلوبة غير موجودة في هذا السنتر.');
+            return;
+        }
+        header('Location: ?action=members', true, 303);
+    }
+
     private static function renderLogin(int $status, string $error): void
     {
         http_response_code($status);
@@ -172,7 +293,8 @@ final class HttpApplication
             'main{max-width:520px;margin:8vh auto;background:#fff;padding:32px;border:1px solid #e0e6f0;border-radius:18px}' .
             'label{display:block;margin-top:16px}input{width:100%;box-sizing:border-box;padding:12px;margin-top:6px;border:1px solid #cbd5e1;border-radius:8px}' .
             'button{margin-top:20px;padding:12px 20px;border:0;border-radius:8px;background:#2458a6;color:#fff;cursor:pointer}' .
-            '.error{color:#a11d2b}</style></head><body><main>' . $body . '</main></body></html>';
+            'table{width:100%;border-collapse:collapse;margin-top:20px}th,td{text-align:right;padding:8px;border-bottom:1px solid #e0e6f0;overflow-wrap:anywhere}' .
+            'td form{margin:0}td button{margin:0;padding:8px 12px}.error{color:#a11d2b}</style></head><body><main>' . $body . '</main></body></html>';
     }
 
     private static function securityHeaders(): void
