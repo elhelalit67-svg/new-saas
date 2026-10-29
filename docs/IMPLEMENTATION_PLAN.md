@@ -14,11 +14,14 @@ Status labels: TODO, IN PROGRESS, BLOCKED, DONE, VERIFIED, DEPLOYED. DONE means 
 - [x] Draft PostgreSQL schema for tenants, verified domains, users, memberships and platform audit events.
 - [x] Add fail-closed hostname normalization and verified-domain resolution primitive.
 - [x] Add hostname normalization tests.
+- [x] Add environment-only PDO PostgreSQL connection factory with input validation and TLS-required default.
+- [x] Add database configuration tests for missing/invalid settings.
 - [ ] Add DB configuration and migration runner after confirming production DB environment.
 - [ ] Add login, secure sessions, CSRF protection and password-reset policy.
 - [ ] Add centralized tenant-scoped data-access layer and resource authorization.
 - [ ] Add integration tests against PostgreSQL and tenant boundary tests.
-- [ ] Confirm PHP runtime/extensions and CI results.
+- [ ] Confirm GitHub Actions results for the latest branch commit and verify PHP runtime/extensions.
+- [ ] Verify database connectivity and migration against an explicitly designated development/test database.
 
 ## Phase 2 — Core center operations
 - [ ] Academic years/terms, branches, rooms, subjects, teachers, groups and students.
