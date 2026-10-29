@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   smoke:
-    runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:16
