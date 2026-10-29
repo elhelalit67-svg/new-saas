@@ -13,6 +13,7 @@ php -l tests/TenantContextIntegrationTest.php
 php tests/TenantContextTest.php
 php tests/DatabaseTest.php
 php tests/SessionSecurityTest.php
+php tests/LoginRateLimiterTest.php
 if [ "${RUN_DB_INTEGRATION:-0}" = "1" ]; then
   php tests/TenantContextIntegrationTest.php
 fi
