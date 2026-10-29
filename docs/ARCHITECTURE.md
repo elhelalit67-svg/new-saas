@@ -8,7 +8,15 @@ The audited repository is a minimal PHP starter. No framework, database, router,
 ## Implemented foundation on the development branch
 - `database/migrations/001_platform_foundation.sql` defines PostgreSQL tables for tenants, domain mappings, users, tenant memberships and platform audit events. This migration has not been applied to any database.
 - `src/TenantContext.php` normalizes DNS hostnames and resolves only active, verified domain mappings using a parameterized query. It is not yet wired into an HTTP router, login flow, or tenant-scoped repository layer.
-- `tests/TenantContextTest.php` covers hostname normalization edge cases. Tests have been added to CI, but execution has not yet been observed.
+- `src/Database.php` creates a PDO PostgreSQL connection from environment variables only, validates connection parameters, defaults to TLS-required mode, and disables emulated prepares. No credentials are committed and no connection is opened during normal page requests yet.
+- `tests/TenantContextTest.php` covers hostname normalization edge cases.
+- `tests/DatabaseTest.php` covers missing configuration and invalid host, database, port and SSL-mode values without contacting a database.
+- GitHub Actions is configured to lint PHP files and run smoke/configuration tests. Passing status for the latest branch commit has not yet been confirmed.
+
+## Database environment
+The connection factory requires `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` and `DB_PASSWORD`. `DB_SSLMODE` is optional and defaults to `require`; accepted values are `disable`, `allow`, `prefer`, `require`, `verify-ca` and `verify-full`. Production should use TLS with certificate verification where the database provider supports it. Never commit credentials. The PHP runtime must have `pdo_pgsql` installed.
+
+The connection factory is not a migration runner and does not prove that a database is reachable or that the schema is installed.
 
 ## Proposed initial shape
 - PHP application with a small front controller and explicit routes.
