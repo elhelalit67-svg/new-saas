@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../src/Database.php';
 require_once __DIR__ . '/../src/TenantContext.php';
+require_once __DIR__ . '/../src/TenantMembershipRepository.php';
 
 $migrationPath = __DIR__ . '/../database/migrations/001_platform_foundation.sql';
 $migration = file_get_contents($migrationPath);
@@ -61,8 +62,58 @@ try {
             throw new RuntimeException("Resolver should fail closed for {$host}.");
         }
     }
+
+    // Seed one account per tenant and exercise the host-bound repository.
+    $insertUser = $pdo->prepare(
+        'INSERT INTO users (email, password_hash, display_name)
+         VALUES (:email, :password_hash, :display_name) RETURNING id'
+    );
+    $insertUser->execute([
+        'email' => 'alpha.integration@example.test',
+        'password_hash' => password_hash('integration-only-secret', PASSWORD_DEFAULT),
+        'display_name' => 'Alpha Member',
+    ]);
+    $alphaUserId = (int)$insertUser->fetchColumn();
+
+    $insertUser->execute([
+        'email' => 'beta.integration@example.test',
+        'password_hash' => password_hash('integration-only-secret', PASSWORD_DEFAULT),
+        'display_name' => 'Beta Member',
+    ]);
+    $betaUserId = (int)$insertUser->fetchColumn();
+
+    $alphaRepo = TenantMembershipRepository::forHost($pdo, 'alpha.example.test');
+    $betaRepo = TenantMembershipRepository::forHost($pdo, 'beta.example.test');
+    if ($alphaRepo === null || $betaRepo === null) {
+        throw new RuntimeException('Could not create repositories for valid tenant hosts.');
+    }
+
+    $alphaRepo->add($alphaUserId, 'teacher');
+    $betaRepo->add($betaUserId, 'teacher');
+
+    $alphaMembers = $alphaRepo->listActive();
+    if (count($alphaMembers) !== 1 || $alphaMembers[0]['id'] !== $alphaUserId) {
+        throw new RuntimeException('Tenant A membership listing leaked or omitted a user.');
+    }
+
+    if ($betaRepo->setMembershipStatus($alphaUserId, 'teacher', 'inactive')) {
+        throw new RuntimeException('Tenant B repository modified a membership owned by tenant A.');
+    }
+
+    if (!$alphaRepo->setMembershipStatus($alphaUserId, 'teacher', 'inactive')) {
+        throw new RuntimeException('Tenant A repository could not update its own membership.');
+    }
+
+    if ($alphaRepo->listActive() !== []) {
+        throw new RuntimeException('Inactive membership remained visible in active membership listing.');
+    }
+
+    $betaMembers = $betaRepo->listActive();
+    if (count($betaMembers) !== 1 || $betaMembers[0]['id'] !== $betaUserId) {
+        throw new RuntimeException('Tenant B membership was affected by Tenant A operations.');
+    }
 } finally {
     $pdo->rollBack();
 }
 
-echo "TenantContext PostgreSQL integration tests passed.\n";
+echo "Tenant resolution and tenant-scoped membership integration tests passed.\n";
