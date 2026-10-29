@@ -46,6 +46,46 @@ final class SessionSecurity
         }
     }
 
+    /**
+     * Establish a tenant-bound authenticated identity after successful login.
+     * Rotates the session ID and CSRF token to prevent session fixation.
+     */
+    public static function authenticate(int $userId, int $tenantId): void
+    {
+        self::requireActiveSession();
+        if ($userId < 1 || $tenantId < 1) {
+            throw new InvalidArgumentException('Authenticated user and tenant IDs must be positive.');
+        }
+
+        self::regenerateId();
+        unset($_SESSION[self::CSRF_KEY]);
+        $_SESSION['auth_user_id'] = $userId;
+        $_SESSION['auth_tenant_id'] = $tenantId;
+        $_SESSION['auth_at'] = time();
+        self::csrfToken();
+    }
+
+    /** @return array{user_id:int,tenant_id:int,authenticated_at:int}|null */
+    public static function authenticatedIdentity(): ?array
+    {
+        self::requireActiveSession();
+        $userId = $_SESSION['auth_user_id'] ?? null;
+        $tenantId = $_SESSION['auth_tenant_id'] ?? null;
+        $authenticatedAt = $_SESSION['auth_at'] ?? null;
+
+        if (!is_int($userId) || $userId < 1 ||
+            !is_int($tenantId) || $tenantId < 1 ||
+            !is_int($authenticatedAt) || $authenticatedAt < 1) {
+            return null;
+        }
+
+        return [
+            'user_id' => $userId,
+            'tenant_id' => $tenantId,
+            'authenticated_at' => $authenticatedAt,
+        ];
+    }
+
     public static function csrfToken(): string
     {
         self::requireActiveSession();
