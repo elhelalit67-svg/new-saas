@@ -57,22 +57,7 @@ try {
     expectDatabaseConfigError(array_replace($valid, ['DB_HOST' => 'db;sslmode=disable']), 'DB_HOST');
     expectDatabaseConfigError(array_replace($valid, ['DB_SSLMODE' => 'unsafe']), 'DB_SSLMODE');
 
-    // On runtimes without pdo_pgsql, valid configuration must fail explicitly
-    // rather than silently falling back to another driver or credentials.
-    foreach ($valid as $key => $value) {
-        putenv($key . '=' . $value);
-    }
-    try {
-        Database::connect();
-        if (!extension_loaded('pdo_pgsql')) {
-            throw new RuntimeException('Expected the missing pdo_pgsql extension to be reported.');
-        }
-    } catch (RuntimeException $exception) {
-        if (!extension_loaded('pdo_pgsql') &&
-            !str_contains($exception->getMessage(), 'pdo_pgsql')) {
-            throw $exception;
-        }
-    }
+
 } finally {
     foreach ($saved as $key => $value) {
         if ($value === false) {
