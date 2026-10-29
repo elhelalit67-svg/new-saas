@@ -13,6 +13,8 @@ final class SessionSecurity
 {
     private const SESSION_NAME = 'alq_session';
     private const CSRF_KEY = '_csrf_token';
+    private const AUTH_IDLE_TIMEOUT_SECONDS = 1800;
+    private const AUTH_ABSOLUTE_TIMEOUT_SECONDS = 43200;
 
     public static function start(bool $secureTransport): void
     {
@@ -62,6 +64,7 @@ final class SessionSecurity
         $_SESSION['auth_user_id'] = $userId;
         $_SESSION['auth_tenant_id'] = $tenantId;
         $_SESSION['auth_at'] = time();
+        $_SESSION['auth_last_seen'] = time();
         self::csrfToken();
     }
 
@@ -72,13 +75,31 @@ final class SessionSecurity
         $userId = $_SESSION['auth_user_id'] ?? null;
         $tenantId = $_SESSION['auth_tenant_id'] ?? null;
         $authenticatedAt = $_SESSION['auth_at'] ?? null;
+        $lastSeen = $_SESSION['auth_last_seen'] ?? null;
+        $now = time();
 
         if (!is_int($userId) || $userId < 1 ||
             !is_int($tenantId) || $tenantId < 1 ||
-            !is_int($authenticatedAt) || $authenticatedAt < 1) {
+            !is_int($authenticatedAt) || $authenticatedAt < 1 ||
+            !is_int($lastSeen) || $lastSeen < 1) {
             return null;
         }
 
+        if ($authenticatedAt > $now || $lastSeen > $now ||
+            ($now - $lastSeen) > self::AUTH_IDLE_TIMEOUT_SECONDS ||
+            ($now - $authenticatedAt) > self::AUTH_ABSOLUTE_TIMEOUT_SECONDS) {
+            unset(
+                $_SESSION['auth_user_id'],
+                $_SESSION['auth_tenant_id'],
+                $_SESSION['auth_at'],
+                $_SESSION['auth_last_seen'],
+                $_SESSION[self::CSRF_KEY]
+            );
+            self::regenerateId();
+            return null;
+        }
+
+        $_SESSION['auth_last_seen'] = $now;
         return [
             'user_id' => $userId,
             'tenant_id' => $tenantId,
