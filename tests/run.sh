@@ -2,6 +2,7 @@
 set -eu
 php -l app/index.php
 php -l src/TenantContext.php
+php -l src/TenantMembershipRepository.php
 php -l src/Database.php
 php -l tests/TenantContextTest.php
 php -l tests/DatabaseTest.php
