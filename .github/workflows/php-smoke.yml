@@ -48,6 +48,7 @@ jobs:
           php -l src/Database.php
           php -l src/TenantMembershipRepository.php
           php -l src/SessionSecurity.php
+          php -l src/AuthService.php
           php -l tests/TenantContextTest.php
           php -l tests/DatabaseTest.php
           php -l tests/SessionSecurityTest.php
