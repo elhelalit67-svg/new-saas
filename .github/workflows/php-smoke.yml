@@ -49,6 +49,7 @@ jobs:
           php -l src/TenantMembershipRepository.php
           php -l src/SessionSecurity.php
           php -l src/AuthService.php
+          php -l src/LoginRateLimiter.php
           php -l tests/TenantContextTest.php
           php -l tests/DatabaseTest.php
           php -l tests/SessionSecurityTest.php
@@ -61,5 +62,7 @@ jobs:
         run: php tests/DatabaseTest.php
       - name: Run session security tests
         run: php tests/SessionSecurityTest.php
+      - name: Run login rate limiter unit tests
+        run: php tests/LoginRateLimiterTest.php
       - name: Run PostgreSQL tenant resolution integration tests
         run: php tests/TenantContextIntegrationTest.php
