@@ -111,6 +111,10 @@ try {
     $alphaRepo->add($alphaUserId, $alphaStaffId, 'teacher');
     $betaRepo->add($betaUserId, $betaUserId, 'teacher');
 
+    $alphaManagementMembers = $alphaRepo->listForManagement($alphaUserId);
+    if (count($alphaManagementMembers) !== 2) {
+        throw new RuntimeException('Management listing should include active and inactive memberships.');
+    }
     $alphaMembers = $alphaRepo->listActive($alphaUserId);
     $alphaIds = array_column($alphaMembers, 'id');
     if (!in_array($alphaUserId, $alphaIds, true) || !in_array($alphaStaffId, $alphaIds, true) ||
