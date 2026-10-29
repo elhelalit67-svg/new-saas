@@ -36,6 +36,18 @@ try {
     if (!SessionSecurity::verifyCsrfToken($token)) {
         throw new RuntimeException('Session ID rotation unexpectedly invalidated the CSRF token.');
     }
+
+    SessionSecurity::authenticate(7, 9);
+    $identity = SessionSecurity::authenticatedIdentity();
+    if ($identity !== ['user_id' => 7, 'tenant_id' => 9, 'authenticated_at' => $identity['authenticated_at'] ?? null]) {
+        throw new RuntimeException('Authenticated identity was not stored as expected.');
+    }
+    if (SessionSecurity::verifyCsrfToken($token)) {
+        throw new RuntimeException('Pre-authentication CSRF token remained valid after login.');
+    }
+    if (!SessionSecurity::verifyCsrfToken(SessionSecurity::csrfToken())) {
+        throw new RuntimeException('Post-authentication CSRF token did not validate.');
+    }
 } finally {
     if (session_status() === PHP_SESSION_ACTIVE) {
         SessionSecurity::destroy();
