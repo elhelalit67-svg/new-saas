@@ -4,6 +4,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/../src/Database.php';
 require_once __DIR__ . '/../src/TenantContext.php';
 require_once __DIR__ . '/../src/TenantMembershipRepository.php';
+require_once __DIR__ . '/../src/SessionSecurity.php';
+require_once __DIR__ . '/../src/AuthService.php';
 
 $migrationPath = __DIR__ . '/../database/migrations/001_platform_foundation.sql';
 $migration = file_get_contents($migrationPath);
@@ -146,7 +148,36 @@ try {
     if (!in_array($betaUserId, $betaIds, true)) {
         throw new RuntimeException('Tenant B membership was affected by Tenant A operations.');
     }
+
+    // Exercise tenant-aware password login and request-time membership checks.
+    SessionSecurity::start(false);
+    if (AuthService::login($pdo, 'alpha.example.test', 'alpha.integration@example.test', 'wrong-password')) {
+        throw new RuntimeException('Invalid password was accepted.');
+    }
+    if (AuthService::login($pdo, 'alpha.example.test', 'alpha.integration@example.test', 'integration-only-secret') !== true) {
+        throw new RuntimeException('Valid tenant member could not log in.');
+    }
+    if (AuthService::currentUserId($pdo, 'alpha.example.test') !== $alphaUserId) {
+        throw new RuntimeException('Authenticated user was not resolved for their tenant.');
+    }
+    if (AuthService::currentUserId($pdo, 'beta.example.test') !== null) {
+        throw new RuntimeException('Authenticated session was accepted on a different tenant host.');
+    }
+    if (AuthService::login($pdo, 'beta.example.test', 'alpha.integration@example.test', 'integration-only-secret')) {
+        throw new RuntimeException('User without a membership in Tenant B could log in there.');
+    }
+
+    $disableUser = $pdo->prepare("UPDATE users SET status = 'inactive' WHERE id = :user_id");
+    $disableUser->execute(['user_id' => $alphaUserId]);
+    if (AuthService::currentUserId($pdo, 'alpha.example.test') !== null) {
+        throw new RuntimeException('Inactive user retained authenticated access.');
+    }
+    $restoreUser = $pdo->prepare("UPDATE users SET status = 'active' WHERE id = :user_id");
+    $restoreUser->execute(['user_id' => $alphaUserId]);
 } finally {
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        SessionSecurity::destroy();
+    }
     $pdo->rollBack();
 }
 
